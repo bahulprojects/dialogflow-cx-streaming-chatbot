@@ -10,3 +10,7 @@ npm-debug.log*
 
 # macOS specific files
 .DS_Store
+
+# --- ADD THIS LINE ---
+# Secret files
+dialogflow-key.json
