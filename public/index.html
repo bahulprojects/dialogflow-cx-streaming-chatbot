@@ -1,0 +1,217 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Dialogflow CX Chatbot</title>
+    <style>
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+            background-color: #f4f7f9;
+            margin: 0;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
+        }
+        .chat-container {
+            width: 450px;
+            height: 600px;
+            background-color: #ffffff;
+            border-radius: 12px;
+            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.1);
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+        }
+        .chat-header {
+            background-color: #007bff;
+            color: white;
+            padding: 16px;
+            font-size: 1.2em;
+            text-align: center;
+            font-weight: bold;
+        }
+        .chat-window {
+            flex-grow: 1;
+            padding: 20px;
+            overflow-y: auto;
+            display: flex;
+            flex-direction: column;
+        }
+        .message {
+            max-width: 75%;
+            padding: 10px 15px;
+            border-radius: 18px;
+            margin-bottom: 10px;
+            line-height: 1.4;
+        }
+        .message .timestamp {
+            font-size: 0.75em;
+            color: #666;
+            margin-top: 5px;
+            text-align: right;
+        }
+        .user-message {
+            background-color: #007bff;
+            color: white;
+            align-self: flex-end;
+            border-bottom-right-radius: 4px;
+        }
+        .user-message .timestamp {
+            color: #e0e0e0;
+        }
+        .bot-message {
+            background-color: #e9e9eb;
+            color: #333;
+            align-self: flex-start;
+            border-bottom-left-radius: 4px;
+        }
+        .input-area {
+            display: flex;
+            padding: 10px;
+            border-top: 1px solid #ddd;
+        }
+        #message-input {
+            flex-grow: 1;
+            border: 1px solid #ccc;
+            border-radius: 20px;
+            padding: 10px 15px;
+            font-size: 1em;
+            outline: none;
+        }
+        #send-button {
+            border: none;
+            background-color: #007bff;
+            color: white;
+            font-weight: bold;
+            border-radius: 20px;
+            padding: 10px 20px;
+            margin-left: 10px;
+            cursor: pointer;
+        }
+        #send-button:hover {
+            background-color: #0056b3;
+        }
+    </style>
+</head>
+<body>
+
+    <div class="chat-container">
+        <div class="chat-header">Chatbot</div>
+        <div class="chat-window" id="chat-window">
+            </div>
+        <div class="input-area">
+            <input type="text" id="message-input" placeholder="Type your message...">
+            <button id="send-button">Send</button>
+        </div>
+    </div>
+
+    <script>
+        // --- DOM Element References ---
+        const chatWindow = document.getElementById('chat-window');
+        const messageInput = document.getElementById('message-input');
+        const sendButton = document.getElementById('send-button');
+
+        // --- WebSocket Connection ---
+        // The URL should match your server's address.
+        const ws = new WebSocket(`ws://${window.location.host}`);
+
+        ws.onopen = () => {
+            console.log('WebSocket connection established.');
+            addMessageToChat('Connected to the chatbot!', 'bot');
+        };
+
+        ws.onclose = () => {
+            console.log('WebSocket connection closed.');
+            addMessageToChat('Connection closed.', 'bot');
+        };
+
+        ws.onerror = (error) => {
+            console.error('WebSocket Error:', error);
+            addMessageToChat('Error connecting to the chatbot.', 'bot');
+        };
+
+        /**
+         * This is the core function for receiving messages.
+         * It parses the server's JSON response and displays it.
+         */
+        ws.onmessage = (event) => {
+            try {
+                const message = JSON.parse(event.data);
+                if (message.text) {
+                    addMessageToChat(message.text, 'bot');
+                }
+            } catch (e) {
+                console.error("Failed to parse message from server:", event.data);
+            }
+        };
+
+        /**
+         * Dynamically adds a new message bubble to the chat window.
+         * @param {string} text - The message text to display.
+         * @param {'user' | 'bot'} sender - Determines the styling of the message.
+         */
+        function addMessageToChat(text, sender) {
+            // Create the main message bubble element
+            const messageElement = document.createElement('div');
+            messageElement.classList.add('message', sender === 'user' ? 'user-message' : 'bot-message');
+
+            // Create the paragraph for the message text
+            const textElement = document.createElement('p');
+            textElement.textContent = text;
+            textElement.style.margin = '0'; // Remove default margin
+
+            // Create the timestamp element
+            const timestampElement = document.createElement('div');
+            timestampElement.classList.add('timestamp');
+            // Get current time with seconds, e.g., "1:34:12 PM"
+            timestampElement.textContent = new Date().toLocaleTimeString([], { hour: 'numeric', minute: '2-digit', second: '2-digit' });
+
+            // Append text and timestamp to the message bubble
+            messageElement.appendChild(textElement);
+            messageElement.appendChild(timestampElement);
+
+            // Append the new message bubble to the chat window
+            chatWindow.appendChild(messageElement);
+
+            // Automatically scroll to the bottom to see the latest message
+            chatWindow.scrollTop = chatWindow.scrollHeight;
+        }
+
+        /**
+         * Gathers input, sends it to the WebSocket server, and displays it in the UI.
+         */
+        function sendMessage() {
+            const text = messageInput.value.trim();
+            if (text === '') {
+                return; // Don't send empty messages
+            }
+
+            // 1. Display the user's message immediately in the UI
+            addMessageToChat(text, 'user');
+
+            // 2. Send the message to the server
+            const messagePayload = {
+                type: 'user_input',
+                text: text
+            };
+            ws.send(JSON.stringify(messagePayload));
+
+            // 3. Clear the input field
+            messageInput.value = '';
+        }
+
+        // --- Event Listeners for User Input ---
+        sendButton.addEventListener('click', sendMessage);
+
+        // Allow sending by pressing "Enter" in the input field
+        messageInput.addEventListener('keypress', (event) => {
+            if (event.key === 'Enter') {
+                sendMessage();
+            }
+        });
+
+    </script>
+</body>
+</html>

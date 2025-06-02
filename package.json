@@ -1,0 +1,18 @@
+{
+  "name": "dfcx-simple-chatbot",
+  "version": "1.0.0",
+  "description": "Simple Node.js chatbot for Dialogflow CX with StreamingDetectIntent and partial responses.",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js"
+  },
+  "dependencies": {
+    "@google-cloud/dialogflow-cx": "^3.0.0",
+    "express": "^4.18.2",
+    "uuid": "^9.0.0",
+    "ws": "^8.14.2"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC"
+}
